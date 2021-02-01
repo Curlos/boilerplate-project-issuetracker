@@ -82,7 +82,9 @@ module.exports = function (app) {
       })
 
       if(Object.keys(updatedFields).length === 0) {
+
         res.json({ error: 'no update field(s) sent', '_id': issueID })
+
       } else if (Object.keys(updatedFields).length >= 1) {
         let issue = await Issue.findOneAndUpdate(filteredFields, {...updatedFields, 
           updated_on: new Date()}, 
@@ -99,43 +101,19 @@ module.exports = function (app) {
     .delete(async (req, res) => {
       let project = req.params.project;
       let issueID = req.body['_id'];
-      let documentCount = 0;
-      const regex = /^[0-9a-fA-F]{24}$/
+      let filteredFields = {'project_name': project, _id: issueID}
 
       if(!req.body['_id']) {
         res.json({ error: 'missing _id' })
       }
 
-      if (issueID.match(regex) == null) {             
-        res.json({ error: 'could not delete', '_id': _id })      
+      let issue = await Issue.findOneAndDelete(filteredFields);
+
+      if(issue === null) {
+        res.json({ error: 'could not delete', '_id': issueID });
+      } else {
+        res.json({result: 'successfully deleted', '_id': issueID});
       }
-
-      let filteredFields = {'project_name': project, _id: issueID}
-      await Issue.countDocuments(filteredFields, (err, count) => {
-        if(err) {
-          console.log('missing id');
-        }
-        console.log(count);
-        documentCount = count;
-        
-        if(count === 0) {
-          res.json({ error: 'could not delete', '_id': issueID });
-        }
-      })
-
-      console.log(documentCount === 1);
-
-      if(documentCount === 1) {
-        let issue = await Issue.findOneAndDelete(filteredFields, (err) => {
-
-          console.log(err);
-  
-          if(err != null) {
-            res.json({ error: 'could not delete', '_id': issueID })
-          } 
-            res.json({result: 'successfully deleted', '_id': issueID});
-        });
-      } 
     });
     
 };
