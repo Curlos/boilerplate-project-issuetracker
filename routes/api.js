@@ -24,22 +24,34 @@ module.exports = function (app) {
   
     .get(async (req, res) => {
       let project = req.params.project;
-      const allIssues = await Issue.find({})
+      let returnedFields = 'project_name assigned_to status_text _id issue_title issue_text created_by created_on updated_on open'
+      let filteredFields = {'project_name': project}
+      let allIssues;
+
+      if(Object.keys(req.query).length >= 1) {
+        filteredFields = {'project_name': project, ...req.query}
+        allIssues = await Issue.find(filteredFields, returnedFields)
+      } else {
+        allIssues = await Issue.find(filteredFields, returnedFields);
+      }
+
       res.json(allIssues);
-      
     })
     
     .post(async (req, res) => {
       let project = req.params.project;
       let requiredFields = Object.keys(req.body).includes('issue_title') && Object.keys(req.body).includes('issue_text') && Object.keys(req.body).includes('created_by')
       
+      console.log(req.body);
+
       if(requiredFields) {
         let issue = new Issue({
+          project_name: project,
           issue_title: req.body.issue_title,
           issue_text: req.body.issue_text,
           created_by: req.body.created_by,
-          assigned_to: req.body.assigned_to,
-          status_text: req.body.status_text,
+          assigned_to: req.body.assigned_to || '',
+          status_text: req.body.status_text || '',
           created_on: new Date(),
           updated_on: new Date(),
           open: true
@@ -48,18 +60,82 @@ module.exports = function (app) {
         issue.save((err, data) => {
           res.json(data);
         })
+      } else {
+        res.json({ error: 'required field(s) missing' });
       }
-      
     })
     
     .put(async (req, res) => {
       let project = req.params.project;
-      console.log(req.body);
+      let updatedFields = {}
+      let issueID = req.body['_id'];
+      let filteredFields = {'project_name': project, _id: issueID};
+
+      if(!req.body['_id']) {
+        res.json({ error: 'missing _id' })
+      }
+
+      Object.keys(req.body).forEach((key) => {
+        if(key !== '_id' && req.body[key] !== '') {
+          updatedFields[key] = req.body[key];
+        }
+      })
+
+      if(Object.keys(updatedFields).length === 0) {
+        res.json({ error: 'no update field(s) sent', '_id': issueID })
+      } else if (Object.keys(updatedFields).length >= 1) {
+        let issue = await Issue.findOneAndUpdate(filteredFields, {...updatedFields, 
+          updated_on: new Date()}, 
+          {new: true}); 
+
+        if(issue === null) {
+          res.json({ error: 'could not update', '_id': issueID })
+        }
+  
+        res.json({result: 'successfully updated', '_id': issueID});
+      }
     })
     
     .delete(async (req, res) => {
       let project = req.params.project;
-      
+      let issueID = req.body['_id'];
+      let documentCount = 0;
+      const regex = /^[0-9a-fA-F]{24}$/
+
+      if(!req.body['_id']) {
+        res.json({ error: 'missing _id' })
+      }
+
+      if (issueID.match(regex) == null) {             
+        res.json({ error: 'could not delete', '_id': _id })      
+      }
+
+      let filteredFields = {'project_name': project, _id: issueID}
+      await Issue.countDocuments(filteredFields, (err, count) => {
+        if(err) {
+          console.log('missing id');
+        }
+        console.log(count);
+        documentCount = count;
+        
+        if(count === 0) {
+          res.json({ error: 'could not delete', '_id': issueID });
+        }
+      })
+
+      console.log(documentCount === 1);
+
+      if(documentCount === 1) {
+        let issue = await Issue.findOneAndDelete(filteredFields, (err) => {
+
+          console.log(err);
+  
+          if(err != null) {
+            res.json({ error: 'could not delete', '_id': issueID })
+          } 
+            res.json({result: 'successfully deleted', '_id': issueID});
+        });
+      } 
     });
     
 };
