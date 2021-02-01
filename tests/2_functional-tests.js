@@ -124,7 +124,6 @@ suite('Functional Tests', function() {
         .get("/api/issues/apitest")
         .query({ created_by: "Bill Gates", issue_title: "COVID21"})
         .end(function(err, res) {
-            console.log(res.body);
             res.body.forEach(issueResult => {
                 assert.equal(issueResult.created_by, "Bill Gates");
                 assert.equal(issueResult.issue_title, "COVID21");
@@ -188,7 +187,6 @@ suite('Functional Tests', function() {
           })
           .end(function(err, res) {
               assert.equal(res.body.error, 'no update field(s) sent');
-            //assert.equal(res.body, "no updated field sent");
             done();
           });
     });
@@ -233,7 +231,6 @@ suite('Functional Tests', function() {
               _id: '6012735625491da6ebc51d7f'
             })
           .end(function(err, res) {
-            console.log(res.body);
             assert.equal(res.body.error, 'could not delete');
             done();
         });
